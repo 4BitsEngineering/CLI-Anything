@@ -1,5 +1,9 @@
 # Security Policy
 
+> **Note:** This document is for human contributors and security reviewers.
+> It is NOT part of the CLI generation methodology — agents should follow
+> HARNESS.md only.
+
 ## Threat Model
 
 CLI-Anything bridges AI agents and real desktop software. Unlike traditional
