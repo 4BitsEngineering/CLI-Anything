@@ -2,7 +2,7 @@
   "meta": {
     "repo": "https://github.com/HKUDS/CLI-Anything",
     "description": "CLI-Hub — Agent-native stateful CLI interfaces for softwares, codebases, and Web Services",
-    "updated": "2026-03-18"
+    "updated": "2026-03-26"
   },
   "clis": [
     {
@@ -172,6 +172,20 @@
       "category": "office",
       "contributor": "CLI-Anything-Team",
       "contributor_url": "https://github.com/HKUDS/CLI-Anything"
+    },
+    {
+      "name": "zotero",
+      "display_name": "Zotero",
+      "version": "0.1.0",
+      "description": "Reference management via local Zotero SQLite, connector, and Local API",
+      "requires": "Zotero desktop app",
+      "homepage": "https://www.zotero.org",
+      "install_cmd": "pip install git+https://github.com/HKUDS/CLI-Anything.git#subdirectory=zotero/agent-harness",
+      "entry_point": "cli-anything-zotero",
+      "skill_md": "zotero/agent-harness/cli_anything/zotero/skills/SKILL.md",
+      "category": "office",
+      "contributor": "zhiwuyazhe_fjr",
+      "contributor_url": "https://github.com/zhiwuyazhe_fjr"
     },
     {
       "name": "mubu",
