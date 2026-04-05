@@ -16,7 +16,8 @@
 !/CONTRIBUTING.md
 !/SECURITY.md
 !/assets/
-!/pi-extension/
+!/.pi-extension/
+/.pi-extension/cli-anything/node_modules
 !/.claude-plugin/
 !/.github/
 /.github/*

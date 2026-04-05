@@ -13,19 +13,15 @@ The CLI-Anything Pi extension provides 5 slash commands that inject the HARNESS.
 Install the extension globally so `/cli-anything` commands are available in **all** Pi projects:
 
 ```bash
-cd CLI-Anything/.pi-extension/extensions/cli-anything
-bash install.sh
+cd CLI-Anything
+bash .pi-extension/cli-anything/install.sh
 ```
 
 To uninstall:
 
 ```bash
-bash install.sh --uninstall
+bash .pi-extension/cli-anything/install.sh --uninstall
 ```
-
-### Option 2: Project-Local
-
-Pi auto-discovers extensions in `.pi-extension/extensions/` within a project. If you're working inside the CLI-Anything repo, the extension is already active — no installation needed.
 
 ### Verify
 
@@ -70,34 +66,21 @@ After installing, run `/reload` in Pi or restart Pi. Then type `/cli-anything` t
 ## Extension Structure
 
 ```
-.pi-extension/extensions/cli-anything/
+.pi-extension/cli-anything/
 ├── index.ts                    # Main extension entry point
+├── install.sh                  # Global installation script
 ├── README.md                   # This file
-├── commands/                   # Command specifications
-│   ├── cli-anything.md         # Main build command
-│   ├── refine.md               # Refinement command
-│   ├── test.md                 # Test runner command
-│   ├── validate.md             # Validation command
-│   └── list.md                 # List tools command
-├── guides/                     # Detailed implementation guides
-│   ├── filter-translation.md
-│   ├── mcp-backend.md
-│   ├── pypi-publishing.md
-│   ├── session-locking.md
-│   ├── skill-generation.md
-│   └── timecode-precision.md
-├── scripts/                    # Utility scripts
-│   └── skill_generator.py      # SKILL.md generator
-├── templates/                  # Templates
-│   └── SKILL.md.template       # Skill definition template
-└── tests/                      # Test suite
-    ├── test_extension.test.ts  # Command registration tests
-    └── test_skill_generator.py # Skill generator tests
+└── tests/
+    └── test_extension.test.ts  # Command registration tests
 ```
 
-> **Note:** HARNESS.md is NOT duplicated here. The extension reads it directly
-> from `cli-anything-plugin/HARNESS.md` (canonical source) using a relative path.
-> When installed globally via `install.sh`, a copy is placed alongside the extension.
+Tests for `skill_generator.py` live in `cli-anything-plugin/tests/` (next to the source).
+
+> **Note:** Command specs, guides, scripts (skill_generator.py, repl_skin.py),
+> templates, and HARNESS.md live in `cli-anything-plugin/` (canonical source).
+> `install.sh` copies them into `~/.pi/agent/extensions/cli-anything/` alongside
+> `index.ts` at install time. The extension reads them from its own directory
+> via `__dirname`.
 
 ## How It Works
 

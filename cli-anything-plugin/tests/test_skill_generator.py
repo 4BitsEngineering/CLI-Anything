@@ -14,12 +14,15 @@ from pathlib import Path
 
 import pytest
 
-# skill_generator lives in cli-anything-plugin/ (canonical) or scripts/ (installed)
-EXT_DIR = Path(__file__).resolve().parent.parent
-SCRIPTS_DIR = EXT_DIR / "scripts"
-if not (SCRIPTS_DIR / "skill_generator.py").exists():
-    SCRIPTS_DIR = EXT_DIR.parents[1] / "cli-anything-plugin"
-sys.path.insert(0, str(SCRIPTS_DIR))
+# Resolve skill_generator.py location:
+# - In the repo: cli-anything-plugin/skill_generator.py (parent dir)
+# - After install.sh: scripts/skill_generator.py (sibling dir)
+_PLUGIN_DIR = Path(__file__).resolve().parent.parent
+_SCRIPTS_DIR = _PLUGIN_DIR / "scripts"
+if (_SCRIPTS_DIR / "skill_generator.py").exists():
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+else:
+    sys.path.insert(0, str(_PLUGIN_DIR))
 
 from skill_generator import (
     extract_cli_metadata,

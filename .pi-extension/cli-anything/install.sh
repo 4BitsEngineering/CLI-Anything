@@ -113,6 +113,14 @@ if [ -f "$SKILL_GEN_SRC" ]; then
     echo "✓ skill_generator.py copied from $SKILL_GEN_SRC"
 fi
 
+# Copy tests from the canonical location
+TESTS_SRC="$REPO_ROOT/cli-anything-plugin/tests"
+if [ -d "$TESTS_SRC" ]; then
+    mkdir -p "$TARGET_DIR/tests"
+    cp "$TESTS_SRC"/*.py "$TARGET_DIR/tests/"
+    echo "✓ tests copied from $TESTS_SRC"
+fi
+
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  ✓ CLI-Anything extension installed globally!"

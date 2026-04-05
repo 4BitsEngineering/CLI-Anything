@@ -203,25 +203,24 @@ cp -r CLI-Anything/cli-anything-plugin ~/.claude/plugins/cli-anything
 
 **Step 1: Install the Extension**
 
-Pi extensions are loaded automatically from the `.pi-extension/extensions/` directory. To install CLI-Anything:
+The extension lives at `.pi-extension/cli-anything/` in this repository. Install it globally so `/cli-anything` commands are available in **all** Pi projects:
 
 ```bash
 # Clone the repo
 git clone https://github.com/HKUDS/CLI-Anything.git
+cd CLI-Anything
 
-# The extension is already included in the repository at:
-# CLI-Anything/.pi-extension/extensions/cli-anything/
+# Install globally into Pi's extensions directory
+bash .pi-extension/cli-anything/install.sh
 ```
 
-If you're developing the extension locally, symlink it to your Pi extensions directory:
+To uninstall:
 
 ```bash
-# Create Pi extensions directory if it doesn't exist
-mkdir -p ~/.pi/extensions
-
-# Symlink the CLI-Anything extension
-ln -s $(pwd)/CLI-Anything/.pi-extension/extensions/cli-anything ~/.pi/extensions/cli-anything
+bash .pi-extension/cli-anything/install.sh --uninstall
 ```
+
+> **How it works:** `install.sh` copies the extension files (including HARNESS.md, commands, guides, scripts, and templates from `cli-anything-plugin/`) into `~/.pi/agent/extensions/cli-anything/`, which Pi auto-discovers on startup. Run `/reload` in Pi or restart Pi to activate.
 
 **Step 2: Build a CLI in One Command**
 
