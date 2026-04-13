@@ -1002,7 +1002,7 @@
           ? `<div class="card-requires"><strong>Requires</strong> ${esc(c.requires)}</div>`
           : '';
         const skillLink = c.skill_md
-          ? `<a href="${REPO}/blob/main/${c.skill_md}" target="_blank">Skill</a>`
+          ? `<a href="${c.skill_md.startsWith('http') ? c.skill_md : `${REPO}/blob/main/${c.skill_md}`}" target="_blank">Skill</a>`
           : '';
         const sourceLink = `<a href="${REPO}/tree/main/${c.name}/agent-harness" target="_blank">Source</a>`;
         const titleHtml = c.homepage
