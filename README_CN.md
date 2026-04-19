@@ -93,8 +93,23 @@ CLI-Anything 以 Claude Code 插件市场的形式托管在 GitHub 上。
 # 为 GIMP 生成完整的 CLI（7 个阶段全自动）
 /cli-anything:cli-anything ./gimp
 
-# 注意：如果你的 Claude Code 版本低于 2.x，请使用 "/cli-anything"。
+# 兼容写法：也可以使用 /cli-anything ./gimp
 ```
+
+Claude Code 不同版本的命令兼容说明：
+- 优先使用 `/cli-anything` 作为主入口。
+- 如果报错 `Unknown skill: cli-anything`，请改用 `/cli-anything:cli-anything` 重试。
+- 其他辅助命令保持 `:子命令` 形式（例如 `/cli-anything:refine`）。
+
+如果仍然出现 `Unknown skill: cli-anything`：
+1. 重新加载插件命令：`/reload-plugins`
+2. 检查安装状态：`/plugin list`（确认存在 `cli-anything`）
+3. 重新安装市场插件：
+   - `/plugin marketplace add HKUDS/CLI-Anything`
+   - `/plugin install cli-anything`
+4. 依次重试两种入口：
+   - `/cli-anything ./gimp`
+   - `/cli-anything:cli-anything ./gimp`
 
 完整流水线自动执行：
 1. 🔍 **分析** — 扫描源码，将 GUI 操作映射到 API

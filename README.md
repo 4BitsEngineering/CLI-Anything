@@ -188,7 +188,20 @@ That's it. The plugin is now available in your Claude Code session.
 /cli-anything ./gimp
 ```
 
-Older Claude Code 2.x releases also accepted `/cli-anything:cli-anything`; auxiliary commands still use the `:subcommand` form (e.g. `/cli-anything:refine`).
+Command compatibility across Claude Code versions:
+- Use `/cli-anything` as the primary entrypoint.
+- If your build reports `Unknown skill: cli-anything`, retry with `/cli-anything:cli-anything`.
+- Auxiliary commands keep the `:subcommand` form (e.g. `/cli-anything:refine`).
+
+If you still see `Unknown skill: cli-anything`:
+1. Reload plugin commands: `/reload-plugins`
+2. Verify install state: `/plugin list` (confirm `cli-anything` is present)
+3. Reinstall from marketplace:
+   - `/plugin marketplace add HKUDS/CLI-Anything`
+   - `/plugin install cli-anything`
+4. Retry both entry forms:
+   - `/cli-anything ./gimp`
+   - `/cli-anything:cli-anything ./gimp`
 
 This runs the full pipeline:
 1. 🔍 **Analyze** — Scans source code, maps GUI actions to APIs
