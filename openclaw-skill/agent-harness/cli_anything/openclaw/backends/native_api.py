@@ -42,6 +42,12 @@ class NativeAPIBackend(Backend):
             return self._find_executable(step, params, context, t0)
         elif action == "run_command":
             return self._run_command(step, params, context, t0)
+        elif action == "spawn":
+            return self._spawn(step, params, context, t0)
+        elif action == "kill_pid":
+            return self._kill_pid(step, params, context, t0)
+        elif action == "sleep":
+            return self._sleep(step, params, context, t0)
         else:
             return StepResult(
                 success=False,
@@ -164,4 +170,204 @@ class NativeAPIBackend(Backend):
             output=output,
             backend_used=self.name,
             duration_ms=duration,
+        )
+
+    def _spawn(
+        self, step: MacroStep, params: dict, context: BackendContext, t0: float
+    ) -> StepResult:
+        """Launch a process detached and return immediately. Use when the target
+        is a long-running GUI app the macro will then drive via semantic_ui.
+        """
+        step_params = substitute(step.params, params)
+        command: list[str] = step_params.get("command", [])
+        if not command:
+            return StepResult(
+                success=False,
+                error="NativeAPIBackend.spawn: 'command' param is required.",
+                backend_used=self.name,
+                duration_ms=(time.time() - t0) * 1000,
+            )
+        if isinstance(command, str):
+            import shlex
+            command = shlex.split(command)
+        command = [str(c) for c in command]
+
+        cwd: str = step_params.get("cwd", "")
+        extra_env: dict = step_params.get("env", {})
+        env = os.environ.copy()
+        if extra_env:
+            env.update({k: str(v) for k, v in extra_env.items()})
+
+        if context.dry_run:
+            return StepResult(
+                success=True,
+                output={"dry_run": True, "command": command},
+                backend_used=self.name,
+                duration_ms=(time.time() - t0) * 1000,
+            )
+
+        try:
+            popen_kwargs: dict[str, Any] = {
+                "cwd": cwd or None,
+                "env": env,
+                "stdin": subprocess.DEVNULL,
+                "stdout": subprocess.DEVNULL,
+                "stderr": subprocess.DEVNULL,
+            }
+            if os.name == "nt":
+                # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
+                popen_kwargs["creationflags"] = 0x00000008 | 0x00000200
+            else:
+                popen_kwargs["start_new_session"] = True
+            proc = subprocess.Popen(command, **popen_kwargs)
+        except FileNotFoundError as exc:
+            return StepResult(
+                success=False,
+                error=f"Command not found: {command[0]}. {exc}",
+                backend_used=self.name,
+                duration_ms=(time.time() - t0) * 1000,
+            )
+        except OSError as exc:
+            return StepResult(
+                success=False,
+                error=f"Spawn failed for {command}: {exc}",
+                backend_used=self.name,
+                duration_ms=(time.time() - t0) * 1000,
+            )
+
+        return StepResult(
+            success=True,
+            output={"pid": proc.pid, "command": command},
+            backend_used=self.name,
+            duration_ms=(time.time() - t0) * 1000,
+        )
+
+    def _kill_pid(
+        self, step: MacroStep, params: dict, context: BackendContext, t0: float
+    ) -> StepResult:
+        """Terminate a process by PID. Idempotent — already-gone is success.
+
+        Accepts either:
+          - pid: <int>            literal pid to kill
+          - from_step: <step_id>  read pid from a previous step's output['pid']
+        """
+        step_params = substitute(step.params, params)
+        pid = step_params.get("pid")
+        from_step = step_params.get("from_step")
+
+        if pid is None and from_step:
+            for prev in context.previous_results:
+                if getattr(prev, "step_id", "") == from_step:
+                    pid = (prev.output or {}).get("pid")
+                    break
+            if pid is None:
+                return StepResult(
+                    success=False,
+                    error=f"NativeAPIBackend.kill_pid: no pid found for from_step='{from_step}'.",
+                    backend_used=self.name,
+                    duration_ms=(time.time() - t0) * 1000,
+                )
+
+        if pid is None:
+            return StepResult(
+                success=False,
+                error="NativeAPIBackend.kill_pid: 'pid' or 'from_step' required.",
+                backend_used=self.name,
+                duration_ms=(time.time() - t0) * 1000,
+            )
+
+        try:
+            pid = int(pid)
+        except (TypeError, ValueError):
+            return StepResult(
+                success=False,
+                error=f"NativeAPIBackend.kill_pid: invalid pid '{pid}'.",
+                backend_used=self.name,
+                duration_ms=(time.time() - t0) * 1000,
+            )
+
+        if context.dry_run:
+            return StepResult(
+                success=True,
+                output={"dry_run": True, "pid": pid},
+                backend_used=self.name,
+                duration_ms=(time.time() - t0) * 1000,
+            )
+
+        try:
+            if os.name == "nt":
+                # /T also kills child processes; /F forces.
+                proc = subprocess.run(
+                    ["taskkill", "/PID", str(pid), "/T", "/F"],
+                    capture_output=True,
+                    timeout=5,
+                )
+                if proc.returncode != 0:
+                    err = (proc.stderr or proc.stdout or b"").decode(errors="ignore")
+                    # 128 = process not found → idempotent success.
+                    if proc.returncode == 128 or "not found" in err.lower():
+                        return StepResult(
+                            success=True,
+                            output={"pid": pid, "already_exited": True},
+                            backend_used=self.name,
+                            duration_ms=(time.time() - t0) * 1000,
+                        )
+                    return StepResult(
+                        success=False,
+                        error=f"taskkill rc={proc.returncode}: {err.strip()}",
+                        backend_used=self.name,
+                        duration_ms=(time.time() - t0) * 1000,
+                    )
+            else:
+                import signal as _signal
+                try:
+                    os.kill(pid, _signal.SIGTERM)
+                except ProcessLookupError:
+                    return StepResult(
+                        success=True,
+                        output={"pid": pid, "already_exited": True},
+                        backend_used=self.name,
+                        duration_ms=(time.time() - t0) * 1000,
+                    )
+        except subprocess.TimeoutExpired:
+            return StepResult(
+                success=False,
+                error="taskkill timed out after 5s",
+                backend_used=self.name,
+                duration_ms=(time.time() - t0) * 1000,
+            )
+        except Exception as exc:
+            return StepResult(
+                success=False,
+                error=f"NativeAPIBackend.kill_pid: {exc}",
+                backend_used=self.name,
+                duration_ms=(time.time() - t0) * 1000,
+            )
+
+        return StepResult(
+            success=True,
+            output={"pid": pid, "killed": True},
+            backend_used=self.name,
+            duration_ms=(time.time() - t0) * 1000,
+        )
+
+    def _sleep(
+        self, step: MacroStep, params: dict, context: BackendContext, t0: float
+    ) -> StepResult:
+        """In-process sleep — does not spawn a child, so it never steals focus."""
+        step_params = substitute(step.params, params)
+        ms = int(step_params.get("ms", 500))
+        if context.dry_run:
+            return StepResult(
+                success=True,
+                output={"dry_run": True, "ms": ms},
+                backend_used=self.name,
+                duration_ms=(time.time() - t0) * 1000,
+            )
+        time.sleep(ms / 1000.0)
+        return StepResult(
+            success=True,
+            output={"slept_ms": ms},
+            backend_used=self.name,
+            duration_ms=(time.time() - t0) * 1000,
         )

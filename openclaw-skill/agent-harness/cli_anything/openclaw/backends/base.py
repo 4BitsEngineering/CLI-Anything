@@ -19,6 +19,7 @@ class StepResult:
     error: str = ""
     duration_ms: float = 0.0
     backend_used: str = ""
+    step_id: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -27,6 +28,7 @@ class StepResult:
             "error": self.error,
             "duration_ms": self.duration_ms,
             "backend_used": self.backend_used,
+            "step_id": self.step_id,
         }
 
 
@@ -41,7 +43,13 @@ class BackendContext:
         timeout_ms: int = 30_000,
     ):
         self.params = params
-        self.previous_results: list[StepResult] = previous_results or []
+        # Keep the caller's list reference — runtime appends to it as steps
+        # execute. `or []` would replace an empty list (falsy) with a fresh
+        # one and silently break previous-step lookups (e.g. kill_pid's
+        # from_step) for any backend that runs after step 1.
+        self.previous_results: list[StepResult] = (
+            previous_results if previous_results is not None else []
+        )
         self.dry_run = dry_run
         self.timeout_ms = timeout_ms
         self._start = time.time()

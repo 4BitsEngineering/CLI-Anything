@@ -84,6 +84,40 @@ def _check_condition(cond: MacroCondition, resolved_params: dict) -> Optional[st
             return f"file_size_gt: '{path}' is {size} bytes, expected > {min_bytes}."
         return None
 
+    elif ctype == "file_contains":
+        # args: {path: <p>, text: <substr>} OR [path, substr]
+        if isinstance(args, dict):
+            path = str(args.get("path", ""))
+            needle = str(args.get("text", args.get("contains", "")))
+        elif isinstance(args, (list, tuple)) and len(args) >= 2:
+            path = str(args[0])
+            needle = str(args[1])
+        else:
+            return f"file_contains: expected {{path,text}} or [path,text], got {args!r}"
+        if not os.path.exists(path):
+            return f"file_contains: '{path}' not found."
+        try:
+            with open(path, encoding="utf-8", errors="replace") as f:
+                content = f.read()
+        except Exception as exc:
+            return f"file_contains: failed to read '{path}': {exc}"
+        if needle not in content:
+            preview = content[:120].replace("\n", "\\n")
+            return f"file_contains: '{needle}' not in '{path}' (first 120 chars: {preview!r})"
+        return None
+
+    elif ctype == "file_size_min":
+        # args: [path, min_bytes]
+        if not isinstance(args, (list, tuple)) or len(args) < 2:
+            return f"file_size_min: expected [path, min_bytes], got {args!r}"
+        path, min_bytes = str(args[0]), int(args[1])
+        if not os.path.exists(path):
+            return f"file_size_min: '{path}' not found."
+        size = os.path.getsize(path)
+        if size < min_bytes:
+            return f"file_size_min: '{path}' is {size} bytes, expected >= {min_bytes}."
+        return None
+
     elif ctype == "process_running":
         name = str(args)
         # Try pgrep first, then psutil
@@ -203,6 +237,8 @@ class MacroRuntime:
                     backend_used=step.backend,
                 )
 
+            # Tag with step id so later steps can look us up via from_step.
+            result.step_id = step.id
             step_results.append(result)
 
             if not result.success:

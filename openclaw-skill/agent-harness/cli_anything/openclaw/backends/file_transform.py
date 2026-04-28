@@ -68,6 +68,7 @@ class FileTransformBackend(Backend):
             "xml_get_attr": self._xml_get_attr,
             "text_replace": self._text_replace,
             "copy_file": self._copy_file,
+            "delete_if_exists": self._delete_if_exists,
         }
 
         handler = dispatch.get(action)
@@ -160,6 +161,16 @@ class FileTransformBackend(Backend):
         shutil.copy2(p["src"], p["dst"])
         size = os.path.getsize(p["dst"])
         return {"src": p["src"], "dst": p["dst"], "size": size}
+
+    def _delete_if_exists(self, p: dict) -> dict:
+        """Delete a file if it exists. Idempotent — does not fail when absent."""
+        target = p.get("path") or p.get("input_file")
+        if not target:
+            raise ValueError("delete_if_exists requires 'path' (or 'input_file').")
+        existed = Path(target).is_file()
+        if existed:
+            Path(target).unlink()
+        return {"path": target, "existed": existed, "deleted": existed}
 
     # ── Helpers ──────────────────────────────────────────────────────────
 

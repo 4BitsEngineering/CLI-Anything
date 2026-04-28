@@ -1,0 +1,122 @@
+name: notepad_create_and_save
+version: "1.0"
+description: >
+  Spawn Notepad++, type a content body into a fresh buffer and save the file
+  to a target path using the Save As dialog. PoC for the openclaw-skill stack
+  on a closed-source Windows GUI app.
+tags: [notepad, windows, poc, semantic_ui]
+
+parameters:
+  output_path:
+    type: string
+    required: true
+    description: Absolute Windows path where the file will be saved.
+    example: 'C:\Users\Public\notepad_poc.txt'
+  content:
+    type: string
+    required: true
+    description: Plain text body that will be typed into the buffer.
+    example: 'Hola desde OpenClaw'
+  notepad_exe:
+    type: string
+    required: false
+    default: 'C:\Program Files\Notepad++\notepad++.exe'
+    description: Full path to notepad++.exe.
+
+preconditions:
+  - file_exists: ${notepad_exe}
+
+steps:
+  - id: pre_clean
+    backend: file_transform
+    action: delete_if_exists
+    params:
+      path: ${output_path}
+    on_failure: continue
+
+  - id: launch
+    backend: native_api
+    action: spawn
+    params:
+      command: ["${notepad_exe}", "-multiInst", "-nosession", "-notabbar"]
+
+  - id: wait_main_window
+    backend: semantic_ui
+    action: wait_for_window
+    params:
+      title_regex: "Notepad\\+\\+"
+      timeout_ms: 12000
+
+  - id: settle_after_launch
+    backend: native_api
+    action: sleep
+    params:
+      ms: 600
+
+  - id: type_body
+    backend: semantic_ui
+    action: type_text
+    params:
+      text: "${content}"
+
+  - id: open_save_as
+    backend: semantic_ui
+    action: shortcut
+    params:
+      keys: "ctrl+alt+s"
+
+  - id: wait_save_dialog
+    backend: semantic_ui
+    action: wait_for_window
+    params:
+      title_regex: "(Save As|Guardar como|Guardar Como|Enregistrer sous|Speichern unter|Salvare con nome)"
+      timeout_ms: 8000
+
+  - id: settle_after_dialog
+    backend: native_api
+    action: sleep
+    params:
+      ms: 400
+
+  - id: type_path
+    backend: semantic_ui
+    action: type_text
+    params:
+      text: "${output_path}"
+
+  - id: confirm_save
+    backend: semantic_ui
+    action: shortcut
+    params:
+      keys: "enter"
+
+  - id: settle_after_save
+    backend: native_api
+    action: sleep
+    params:
+      ms: 800
+
+  - id: close_notepad
+    backend: native_api
+    action: kill_pid
+    params:
+      from_step: launch
+    on_failure: continue
+
+postconditions:
+  - file_exists: ${output_path}
+  - file_size_min: ["${output_path}", 1]
+  - file_contains:
+      path: ${output_path}
+      text: ${content}
+
+outputs:
+  - name: saved_file
+    path: ${output_path}
+    description: Path of the file produced by Notepad++.
+
+agent_hints:
+  danger_level: low
+  side_effects: [creates_file, focus_steal]
+  reversible: false
+  estimated_duration_ms: 6000
